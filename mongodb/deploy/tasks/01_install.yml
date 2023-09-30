@@ -1,0 +1,112 @@
+---
+- name: "MONGO INSTALL | Create group mongod"
+  group:
+    name: mongod
+    system: true
+
+- name: "MONGO INSTALL | Create user mongod"
+  user:
+    name: mongod
+    system: true
+    group: mongod
+    comment: 'MongoDB Server'
+    create_home: false
+    shell: /sbin/nologin
+
+- name: "MONGO INSTALL | Create data folder"
+  file:
+    state: directory
+    path: "{{ mongo_storage.dbPath }}"
+    mode: '0770'
+    owner: mongod
+    group: mongod
+
+- name: "MONGO INSTALL | Install dependencies"
+  dnf:
+    name:
+      - python3-devel
+      - python3-pip
+
+- name: "MONGO INSTALL | Install pymongo"
+  pip:
+    name: pymongo
+    executable: pip3
+
+- name: "MONGO INSTALL | Install mongodb rpm"
+  ansible.builtin.yum:
+    name: "{{ source }}/{{ ansible_distribution_major_version }}/mongodb-org/{{ mongodb_version_terse }}/x86_64/RPMS/{{ item }}"
+    state: present
+    disable_gpg_check: true
+  with_items:
+    - "mongodb-org-server-{{ mongodb_version }}-1.el{{ansible_distribution_major_version}}.x86_64.rpm"
+    - "mongodb-mongosh-{{ mongosh_version }}.x86_64.rpm"
+    - "mongodb-org-database-tools-extra-{{ mongo_extra }}-1.el8.x86_64.rpm"
+    - "mongodb-database-tools-{{ mongo_dbtools }}.x86_64.rpm"   
+    - "mongodb-org-tools-{{ mongo_tools }}-1.el8.x86_64.rpm"
+
+- name: "MONGO INSTALL | set temporary conf"
+  template:
+    src: standalone_init.j2
+    dest: /etc/mongod.conf
+    owner: mongod
+    group: mongod
+    mode: '0644'
+
+- name: "MONGO INSTALL | Allow database port 27017 in iptables"
+  become: true
+  ansible.builtin.iptables:
+    action: insert
+    rule_num: 2
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ mongo_net.port }}"
+    ctstate: NEW
+    jump: ACCEPT
+    comment: "Allow MongoDB"
+  ignore_errors: true
+
+- name: "MONGO INSTALL | Save iptables configuration"
+  ansible.builtin.shell: iptables-save > /etc/sysconfig/iptables
+  ignore_errors: true
+
+- name: "MONGO INSTALL | ensure mongod is started and enabled"
+  service:
+    name: mongod
+    state: started
+    enabled: true
+
+- name: "MONGO INSTALL | create users admin, adminuser and backup"
+  community.mongodb.mongodb_user:
+    database: admin
+    name: "{{ item.name }}"
+    password: "{{ item.pass }}"
+    roles: "{{ item.role }}"
+    login_host: 127.0.0.1
+    login_port: "{{ mongo_net.port }}"
+  no_log: false
+  with_items: "{{ mongo_users }}"
+  when: item.name != '' or item.name is defined
+
+- name: "MONGO INSTALL | set temporary conf"
+  template:
+    src: standalone.j2
+    dest: /etc/mongod.conf
+    owner: mongod
+    group: mongod
+    mode: '0644'
+
+- name: "MONGO INSTALL | restart mongod"
+  service:
+    name: mongod
+    state: restarted
+    enabled: true
+
+- name: "MONGO INSTALL | setup mongoshrc.js"
+  template:
+    src: mongoshrc.js.j2
+    dest: /root/.mongoshrc.js
+    owner: root
+    group: root
+    mode: '0700'
+  become: yes
+  become_user: root

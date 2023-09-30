@@ -1,0 +1,13 @@
+---
+- name: "pre install mongo"
+  include_tasks: 00_preinstall.yml
+
+- name: "install mongo"
+  include_tasks: 01_install.yml
+
+- name: "switch to replicaset"
+  include_tasks: 01_replicaset.yml
+  when: mongo_arch == 'replicaset'
+
+
+

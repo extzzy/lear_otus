@@ -1,0 +1,38 @@
+---
+urls:
+  'original': "https://repo.mongodb.org/yum/redhat"
+  'custom': "http://custom.org"
+
+input_source: "{{ lookup('env', 'var_source') | default('original', true) }}" 
+mongo_arch: "{{ lookup('env', 'var_mongo_arch') | default('standalone', true) }}" 
+
+mongo_storage:
+  dbPath: /var/lib/mongodb
+
+mongo_net:
+  bindIp: "{{ lookup('env', 'var_mongo_ip') | default('0.0.0.0', true)}}"
+  port: "{{ lookup('env', 'var_mongo_port') | default('27017', true)}}"
+
+mongo_root_pass: "{{ lookup('env', 'var_admin_password') | default('password', true)}}"
+mongo_admin_pass: "{{ lookup('env', 'var_mongo_password') | default('password', true)}}"
+
+mongo_users:
+- { name: 'admin', pass: "{{ mongo_root_pass }}", role: 'root' }
+- { name: 'mongo', pass: "{{ mongo_admin_pass }}", role: 'userAdminAnyDatabase' }
+- { name: 'backup', pass: 'password', role: 'backup' }
+
+supported_version:
+  '8':
+    '4.4': {mongod: '4.4.9', mongod_terse: '4.4', mongosh: '1.10.5', extra: '4.4.23', dbtools: '100.8.0', tools: '4.4.23'}
+    '5':   {mongod: '5.0.9', mongod_terse: '5.0', mongosh: '1.10.5', extra: '5.0.20', dbtools: '100.8.0', tools: '5.0.20'}
+    '6':   {mongod: '6.0.9', mongod_terse: '6.0', mongosh: '1.10.5', extra: '6.0.9',  dbtools: '100.8.0', tools: '6.0.9'}
+    '7':   {mongod: '7.0.0', mongod_terse: '7.0', mongosh: '1.10.5', extra: '7.0.0', dbtools: '100.8.0', tools: '7.0.0'}
+
+input_ver: "{{ lookup('env', 'var_db_version') | default('7', true)}}"
+mongodb_version: "{{ supported_version[ansible_distribution_major_version][input_ver].mongod }}" 
+mongodb_version_terse: "{{ supported_version[ansible_distribution_major_version][input_ver].mongod_terse }}" 
+mongosh_version: "{{ supported_version[ansible_distribution_major_version][input_ver].mongosh }}" 
+mongo_extra: "{{ supported_version[ansible_distribution_major_version][input_ver].extra }}" 
+mongo_dbtools: "{{ supported_version[ansible_distribution_major_version][input_ver].dbtools }}" 
+mongo_tools: "{{ supported_version[ansible_distribution_major_version][input_ver].tools }}" 
+replicaset_name: "{{ lookup('env', 'var_replicaset_name') | default('mongo_repl', true) }}" 
