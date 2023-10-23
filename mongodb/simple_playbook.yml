@@ -1,0 +1,8 @@
+- hosts: "{{ lookup('env', 'var_hosts') | default('all', true) }}"
+  become: true
+  gather_facts: yes
+  any_errors_fatal: true
+
+  roles:
+    - role: mongodb
+
