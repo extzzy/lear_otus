@@ -9,5 +9,6 @@
   include_tasks: 01_replicaset.yml
   when: mongo_arch == 'replicaset'
 
-
-
+- name: "import data"
+  include_tasks: 02_import.yml
+  when: import_data | bool == true

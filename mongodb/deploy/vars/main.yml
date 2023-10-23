@@ -5,6 +5,7 @@ urls:
 
 input_source: "{{ lookup('env', 'var_source') | default('original', true) }}" 
 mongo_arch: "{{ lookup('env', 'var_mongo_arch') | default('standalone', true) }}" 
+import_data: "{{ lookup('env', 'var_import') | default('true', true) }}" 
 
 mongo_storage:
   dbPath: /var/lib/mongodb

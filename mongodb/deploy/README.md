@@ -1,9 +1,22 @@
-# Деплой mongodb
+# Деплой MongoDB
 
 ## 
 
 Роль разворачивает mongodb в зависимости от выбранных опций (standalone/replicaset)
+Импортирует тестовые данные ( https://github.com/neelabalan/mongodb-sample-dataset/tree/main )
+Создаёт индекс в бд sample_airbnb на коллекции listingsAndReviews с именем myindex по полю year
+Также создаётся файлик /root/.mongoshrc.js (0700) для быстрого подключения к монго без ввода пароля. 
+Авторизация включена поумолчанию.
 Доступны версии: 4.4, 5, 6, 7
+
+Простестировано на RHEL (RockyLinux 8,9)
+
+## Пример sh скрипта с переменными окружения для запуска
+    export var_source="original"
+    export var_mongo_arch="replicaset"
+    export var_mongo_ver=6
+    cd /opt/ansible-egonkov/ansible/
+    ansible-playbook playbooks/test.yml -i hosts/pg-test-cluster2 
 
 
 ## Конфигурирование параметров
@@ -21,4 +34,5 @@
 | var_mongo_password          | text   | -     | -     | password          | Пароль админа всех баз |
 | var_backup_pass             | text   | -     | -     | password          | Пароль для пользователя backup |
 | var_replicaset_name         | text   | -     | -     | mongo_repl        | Название replicaset |
+| var_import                  | text   | -     | -     | true              | Загрузить тестовые данные? |
 

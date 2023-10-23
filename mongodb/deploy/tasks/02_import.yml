@@ -1,0 +1,44 @@
+---
+- name: "check master node"
+  community.mongodb.mongodb_shell:
+    login_user: "admin"
+    login_password: "{{ mongo_root_pass }}"
+    eval: "db.runCommand( { isMaster: 1 } ).ismaster"
+    transform: json
+  register: rs
+
+- debug:
+    msg: "{{ rs }}"
+  when: rs.transformed_output | bool == true 
+
+- block:
+  - name: install | dependencies
+    dnf:
+      name: git
+
+  - name: Clone a github repository
+    git:
+      repo: https://github.com/neelabalan/mongodb-sample-dataset.git
+      dest: /tmp/dataset/
+      clone: yes
+      update: yes
+
+  - name: Import dataset to mongod
+    shell: "./script.sh localhost 27017 admin {{ mongo_root_pass }}"
+    args:
+      chdir: /tmp/dataset/
+
+  - name: Create a single index on a collection
+    community.mongodb.mongodb_index:
+      login_user: admin
+      login_password: "{{ mongo_root_pass }}"
+      indexes:
+        - database: sample_airbnb
+          collection: listingsAndReviews
+          keys:
+            year: -1
+          options:
+            name: myindex
+          state: present
+        
+  when: rs.transformed_output | bool == true 
