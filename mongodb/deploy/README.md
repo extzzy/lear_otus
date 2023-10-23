@@ -9,6 +9,35 @@
 
 Простестировано на RHEL (RockyLinux 8,9)
 
+# Удаление/создание индекса и вывод статистики до/после
+    mongosh
+    use simple_airbmb
+    db.getCollection('listingsAndReviews').getIndexes()             // проверяем список индексов
+    db.getCollection('listingsAndReviews').dropIndex('myindex')     // удаляем индекс созданный ansible
+    db.getCollection('listingsAndReviews').find({year: 2000}).explain('executionStats').executionStats.executionTimeMillis // выводим статистику по поиску
+    db.getCollection('listingsAndReviews').createIndex({year: -1}) // создаём индекс по year 
+    db.getCollection('listingsAndReviews').find({year: 2000}).explain('executionStats').executionStats.executionTimeMillis // повторно выполняем запрос для сравнения 
+
+# Результаты
+
+| Номер запуска              |  Без индексом (мс)  |  С индексом (мс)  |
+| -------------------------- | :----------------:  | :---------------: | 
+| 1                          | 539                 | 1                 | 
+| 2                          | 15                  | 1                 | 
+| 3                          | 17                  | 2                 | 
+
+# Выборка и обновление данных
+    mongosh
+    use simple_airbnb
+    db.getCollection("listingsAndReviews").find({"weekly_price" : {"$gte" : 600,"$lt": 650}}); // вывести объявление с ценой за неделю от 600 до 650
+    db.getCollection("listingsAndReviews").aggregate([{$group: {"_id": null, average_cost_week: {$avg: "$weekly_price"} } }]) // средняя цена по всем объявлениям за неделю
+    db.getCollection("listingsAndReviews").updateOne(
+        {"_id" : "10423504"},
+        { $set: { security_deposit: "500"} }
+    ); // обновление security депозита у конкретного объявления 
+
+
+
 ## Пример sh скрипта с переменными окружения для запуска
     export var_source="original"
     export var_mongo_arch="replicaset"
