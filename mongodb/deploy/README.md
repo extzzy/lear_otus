@@ -1,7 +1,5 @@
 # Деплой MongoDB
 
-## 
-
 Роль разворачивает mongodb в зависимости от выбранных опций (standalone/replicaset)  
 Импортирует тестовые данные ( https://github.com/neelabalan/mongodb-sample-dataset/tree/main )  
 Создаёт индекс в бд sample_airbnb на коллекции listingsAndReviews с именем myindex по полю year  
@@ -16,7 +14,7 @@
     export var_mongo_arch="replicaset"
     export var_mongo_ver=6
     cd /opt/ansible-egonkov/ansible/
-    ansible-playbook simple_playbook.yml -i hosts/mongo_hosts
+    ansible-playbook simple_playbook.yml -i simple_inventory
 
 
 ## Конфигурирование параметров
