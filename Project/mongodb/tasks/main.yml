@@ -1,0 +1,23 @@
+---
+- name: config | set repo
+  set_fact:
+    source: "{{ urls[input_source] }}"
+
+- name: "install mongo"
+  include_tasks: 00_install.yml
+
+- name: "switch to replicaset"
+  include_tasks: 01_replicaset.yml
+  when: mongo_arch == 'replicaset'
+
+- name: "deploy keepalived vip"
+  include_tasks: 02_keepalived.yml
+  when: mongo_arch == 'replicaset' and vip_address is defined
+
+- name: "add logrotate rule"
+  template:
+    src: mongodb-logrotate.j2
+    dest: /etc/logrotate.d/mongod
+    owner: root
+    group: root
+    mode: '0644'

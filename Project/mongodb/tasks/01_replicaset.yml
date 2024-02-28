@@ -1,0 +1,83 @@
+---
+- name: "MongoDB | MongoDB | ReplicaSet | Create keyfile"
+  shell: openssl rand -base64 741 > /tmp/keyfile.key ;
+  delegate_to: localhost
+  run_once: true
+
+- name: "MongoDB | ReplicaSet | Upload keyfile"
+  copy:
+    src: /tmp/keyfile.key
+    dest: /etc/mongodb.keyfile
+    owner: mongod
+    group: mongod
+    mode: '0400'
+
+- name: "MongoDB | ReplicaSet | build member list"
+  set_fact:
+    members: >-
+      {{
+        members | default([]) +
+        [{
+          'host': 'node'+ (my_idx+1)|string+':'+mongo_net.port,
+          'priority': 1
+        }]
+      }}
+  loop: "{{ ansible_play_hosts }}"
+  loop_control:
+    index_var: my_idx
+  run_once: true
+
+- name: "MongoDB | ReplicaSet | set temporary conf"
+  template:
+    src: replicaset_init.j2
+    dest: /etc/mongod.conf
+    owner: mongod
+    group: mongod
+    mode: '0644'
+    
+- name: "MongoDB | ReplicaSet | restart mongo"
+  service:
+    name: mongod
+    state: restarted
+
+- name: "MongoDB | ReplicaSet | Wait for port {{ mongo_net.port }} to become open on the host"
+  wait_for:
+    port: "{{ mongo_net.port }}"
+    host: 127.0.0.1
+    state: started
+    timeout: 120
+    delay: 10
+  ignore_errors: false
+
+- name: "MongoDB | ReplicaSet | Create ReplicaSet"
+  community.mongodb.mongodb_replicaset:
+    login_host: localhost
+    login_port: "{{ mongo_net.port }}"
+    login_user: admin
+    login_password: password
+    replica_set: "{{ replicaset_name }}"
+    members: "{{ members }}"
+    #arbiter_at_index: "{{ arbiter_index | default(omit) }}"
+  when:  inventory_hostname == groups['all'][0]
+
+- name: "MongoDB | ReplicaSet | set replicaset conf"
+  template:
+    src: replicaset.j2
+    dest: /etc/mongod.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "MongoDB | ReplicaSet | restart mongo"
+  service:
+    name: mongod
+    state: restarted
+
+- name: "MongoDB | ReplicaSet | Wait for port {{ mongo_net.port }} to become open on the host"
+  wait_for:
+    port: "{{ mongo_net.port }}"
+    host: 127.0.0.1
+    state: started
+    timeout: 120
+    delay: 10
+  ignore_errors: false

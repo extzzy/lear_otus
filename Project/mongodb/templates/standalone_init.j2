@@ -1,0 +1,18 @@
+# mongod.conf
+
+# network interfaces
+net:
+  port: "{{ mongo_net.port }}"
+  bindIp: "{{ mongo_net.bindIp }}"
+
+systemLog:
+  destination: file
+  logAppend: true
+  path: /var/log/mongodb/mongod.log
+
+processManagement:
+  fork: true  # fork and run in background
+  pidFilePath: /var/run/mongodb/mongod.pid  # location of pidfile
+
+storage:
+  dbPath: "{{ mongo_storage.dbPath }}"

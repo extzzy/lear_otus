@@ -1,0 +1,39 @@
+{{ ansible_managed | comment }}
+
+global_defs {
+   router_id MONGODB_DB-HA
+   process_names
+   enable_script_security
+   script_user root
+}
+
+vrrp_script chk_mongod_is_running {
+    script "killall -0 mongod"
+    interval 2
+    weight 2
+}
+
+vrrp_script chk_mongodb_in_master_mode {
+    script "/etc/keepalived/check_mongo_master.sh"
+    interval 2
+    weight 2
+}
+
+vrrp_instance VI_2 {
+    state MASTER
+    interface {{ vip_iface }}
+    virtual_router_id {{ vip_router_id }}
+    priority 100
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass {{ vrrp_password }}
+    }
+    virtual_ipaddress {
+        {{ vip_address }}/{{ vip_subnet.stdout }} dev {{ vip_iface }}
+    }
+    track_script {
+        chk_mongod_is_running
+        chk_mongodb_in_master_mode
+    }
+}

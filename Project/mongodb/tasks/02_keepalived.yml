@@ -1,0 +1,100 @@
+---
+
+- name: "Collect all IP addresses in list"
+  ansible.builtin.set_fact:
+    ip_addresses: "{{ ansible_play_hosts | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | list }}"
+
+- name: "Calculate cluster IP address if not defined"
+  ansible.builtin.set_fact:
+    vip_address: "{{ ip_addresses | max | ansible.utils.ipmath(1) }}"
+  run_once: true
+  when: vip_address is not defined or vip_address == ''
+
+- name: "Get vip prefix network"
+  ansible.builtin.set_fact:
+    vip_network: "{{ vip_address | regex_search('^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}') }}"
+
+- debug: msg="vip {{ vip_address }} = net {{ vip_network }}"
+
+- name: "Collect interfaces config in list"
+  ansible.builtin.command: ip -4 addr show dev {{ item }}
+  changed_when: false
+  register: ip_info
+  loop: "{{ ansible_interfaces }}"
+
+- name: "Find interface for vip address"
+  ansible.builtin.set_fact:
+    vip_iface: "{{ item.item }}"
+  loop: "{{ ip_info.results }}"
+  when: item.stdout is search("inet " + vip_network + ".")
+
+- ansible.builtin.assert:
+    that:
+      - vip_iface is defined and vip_iface != ''
+
+- name: "Get network subnet for vip ip address"
+  ansible.builtin.shell: ip -4 addr show dev {{ vip_iface }} | grep -Eo "inet {{ vip_network }}\.[0-9]{1,3}/[0-9]{1,2}" | cut -f2 -d"/"
+  changed_when: false
+  register: vip_subnet
+
+- name: "Install keepalived"
+  ansible.builtin.yum:
+    name: keepalived
+    state: installed
+  register: ka_installed
+  become: true
+
+- name: "Configure keepalived"
+  block:
+##########
+    - name: "Generate unique params for keepalived"
+      ansible.builtin.set_fact:
+        vrrp_password: "{{ lookup('ansible.builtin.password', '/dev/null', chars=['ascii_letters','digits'], length=16) }}"
+        vip_router_id: "{{ 255 | ansible.builtin.random(start=1) }}"
+      run_once: true
+
+    - name: "Rename distrib config file"
+      ansible.builtin.command: mv "/etc/keepalived/keepalived.conf" "/etc/keepalived/keepalived.conf-dist"
+      args:
+        removes: "/etc/keepalived/keepalived.conf"
+        creates: "/etc/keepalived/keepalived.conf-dist"
+
+    - name: "Generate config from template"
+      ansible.builtin.template:
+        src: keepalived.conf.j2
+        dest: /etc/keepalived/keepalived.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: "Copy check script for keepalived"
+      ansible.builtin.copy:
+        src: "check_mongo_master.sh"
+        dest: "/etc/keepalived/check_mongo_master.sh"
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: "Allow keepalived VRRP protocol in iptables"
+      ansible.builtin.iptables:
+        action: insert
+        rule_num: 2
+        chain: INPUT
+        protocol: vrrp
+        jump: ACCEPT
+        comment: "Allow VRRP for keepalived"
+      ignore_errors: true
+
+    - name: "Save iptables configuration"
+      ansible.builtin.shell: iptables-save > /etc/sysconfig/iptables
+      ignore_errors: true
+
+    - name: "Ensure keepalived is started and enabled on boot"
+      ansible.builtin.service:
+        daemon_reload: true
+        name: keepalived
+        state: started
+        enabled: true
+##########
+  become: true
+  when: ka_installed.changed == true and ka_installed.failed == false

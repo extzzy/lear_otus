@@ -1,0 +1,15 @@
+{{ ansible_managed | comment }}
+
+/var/log/mongodb/*.log {
+    daily
+    rotate 30
+    size 50M
+    compress
+    dateext
+    missingok
+    notifempty
+    sharedscripts
+    postrotate
+        /bin/kill -SIGUSR1 `cat /var/lib/mongodb/mongod.lock 2> /dev/null` 2> /dev/null || true
+    endscript
+}
