@@ -17,32 +17,29 @@ ansible-playbook otus_playbook.yml -i otus_inventory.yml
 3. Нажать Load Sample Data
 
 ### Проверить отказоустойчивость 
-1. Перейти на вкладку Query и вывести количество строк в бакете travelSample
+1. Перейти на вкладку Query и вывести количество строк в бакете beer-sample
 ```SQL
-SELECT COUNT(*) FROM travelSample
+SELECT COUNT(*) FROM _default
 ```
 
 ```Json
 [
   {
-    "code": 12003,
-    "msg": "Keyspace not found in CB datastore: default:travelSample - cause: No bucket named travelSample",
-    "query": "SELECT COUNT(*) FROM travelSample"
+    "$1": 7303
   }
 ]
 ```
 2. Отправить 3 ноду кластера в оффлайн (shutdown)
 3. Проверить повторно сколько записей доступно
 ```SQL
-SELECT COUNT(*) FROM travelSample
+SELECT COUNT(*) FROM _default
 ```
 
 ```Json
 [
   {
-    "code": 12003,
-    "msg": "Keyspace not found in CB datastore: default:travelSample - cause: No bucket named travelSample",
-    "query": "SELECT COUNT(*) FROM travelSample"
+    "$1": 7303
   }
 ]
 ```
+4. Если на 3 ноде не было роли **data** - данные будут доступны
