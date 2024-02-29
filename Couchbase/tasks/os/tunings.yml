@@ -1,0 +1,44 @@
+---
+- name: Check to see if the kernel settings have already been deployed
+  stat:
+    path: /etc/sysctl.d/couchbase-server.conf
+  register: check_sysctl
+  when: couchbase_os.kernel_tunings | default(false)
+  tags:
+    - couchbase_os
+    - couchbase_kernel_tunings
+
+- name: Make sure the Kernel settings directory exists
+  become: true
+  become_user: root
+  file:
+    dest: /etc/sysctl.d
+    state: directory
+    owner: root
+    group: root
+    mode: 0644
+  when: couchbase_os.kernel_tunings | default(false) and not check_sysctl.stat.exists
+  tags:
+    - couchbase_os
+    - couchbase_kernel_tunings
+
+- name: Kernel settings config
+  become: true
+  become_user: root
+  template:
+    src: etc/sysctl.d/couchbase-server.conf.j2
+    dest: /etc/sysctl.d/couchbase-server.conf
+    owner: root
+    group: root
+    mode: 0644
+  when: couchbase_os.kernel_tunings | default(false) and not check_sysctl.stat.exists
+  tags:
+    - couchbase_os
+    - couchbase_kernel_tunings
+
+- name: Update kernel settings
+  command: sysctl -e -p /etc/sysctl.d/couchbase-server.conf
+  when: couchbase_os.kernel_tunings | default(false)
+  tags:
+    - couchbase_os
+    - couchbase_kernel_tunings

@@ -1,0 +1,20 @@
+---
+- hosts: all
+  become: true
+  become_user: root
+  vars:
+    couchbase_os:
+      firewalld: false
+      iptables: true
+      disable_thp: true
+      common_tools: true
+      kernel_tunings: true
+      user_limits: true
+    couchbase_cluster:
+      name: Testing Cluster
+    couchbase_nodes:
+      - hostname: host1.dbaas.service.dtln.ru
+      - hostname: host2.dbaas.service.dtln.ru
+      - hostname: host3.dbaas.service.dtln.ru
+  roles:
+    - couchbase

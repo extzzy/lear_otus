@@ -1,0 +1,10 @@
+all: # keys must be unique, i.e. only one 'hosts' per group
+  hosts:
+    egonkov-test1.dbaas.service.dtln.ru:
+      ansible_host: 10.215.2.56
+    egonkov-test2.dbaas.service.dtln.ru:
+      ansible_host: 10.215.2.57
+    egonkov-test3.dbaas.service.dtln.ru:
+      ansible_host: 10.215.2.55
+  vars:
+    ansible_connection: ssh

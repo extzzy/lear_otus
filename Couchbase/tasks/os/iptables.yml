@@ -1,0 +1,24 @@
+---
+- name: "INIT | Allow port on iptables"
+  become: true
+  ansible.builtin.iptables:
+    action: insert
+    rule_num: 2
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ item.value }}"
+    ctstate: NEW
+    jump: ACCEPT
+    comment: "{{ item.option }}"
+  loop: "{{ iptables_rules }}"
+
+- name: "INIT | iptables-save"
+  ansible.builtin.shell: iptables-save > /etc/sysconfig/iptables
+  ignore_errors: True
+
+- name: restart iptables
+  become: true
+  systemd:
+    daemon_reload: true
+    name: iptables
+    state: restarted
